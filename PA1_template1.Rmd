@@ -1,0 +1,82 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+## Loading and preprocessing the data
+```{r}
+read.csv("activity.csv")
+library(readr)
+activity <- read_csv("activity.csv")
+```
+
+## What is mean total number of steps taken per day?
+```{r}
+totalsteps <-aggregate(steps ~ date, activity, FUN = sum)
+```
+#### Making a Histogram
+```{r}
+hist(totalsteps$steps, ylab = "Number of Days", xlab = "Number of steps", col = "red", main = "Total Steps Daily")
+```
+#### Finding the mean and median
+```{r}
+meansteps<-mean(totalsteps$steps)
+mediansteps<-median(totalsteps$steps)
+```
+## What is the average daily activity pattern?
+```{r}
+library(ggplot2)
+meanStepsInt<-aggregate(steps ~ interval, activity, mean)
+ggplot(data = meanStepsInt, aes(x=interval, y=steps))+
+  geom_line()+
+  ggtitle("Average Activity Pattern")+
+  xlab("5-minute Interval")+
+  ylab("Average number of steps")
+```
+#### 5-Minute interval containing maximum steps
+```{r}
+MaxIntv<-meanStepsInt[which.max(meanStepsInt$steps),]
+```
+
+## Imputing missing values
+Use the **mean interval** to fill the missing values 
+```{r}
+newactivity<-activity
+for (i in meanStepsInt$interval) {
+  newactivity[newactivity$interval == i & is.na(newactivity$steps), ]$steps <-
+    meanStepsInt$steps[meanStepsInt$interval ==i]
+}
+head(newactivity)
+sum(is.na(newactivity)) #####Making sure there are no missing values
+```
+
+#### Creating a Historgram for the new Data
+```{r}
+newactivitytotal<-aggregate(steps ~ date, data = newactivity, sum, na.rm=TRUE)
+hist(newactivitytotal$steps, ylab = "Number of Days", xlab = "Number of steps", col="blue", main = "New Daily Steps")
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+daytypes<-function(date) {
+  days<-weekdays(date)
+  if (days %in% c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'))
+      return("weekday")
+  else if (days %in% c('Saturday', 'Sunday'))
+      return("weekend")
+  else
+      stop("Invalid Date Format")
+}
+newactivity$date <-as.Date(newactivity$date)
+newactivity$day <-sapply(newactivity$date, FUN = daytypes)
+
+meanstepsdaily<- aggregate(steps ~ interval + day, newactivity, mean)
+ggplot(data = meanstepsdaily, aes(x=interval, y=steps))+
+  geom_line()+
+  facet_grid(day ~ .)+
+  ggtitle("Average Daily Activity Pattern")+
+  xlab("5- Minute Interval")+
+  ylab("Average Number of Steps")
+```
